@@ -1,0 +1,703 @@
+{
+  "name": "Phase2",
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"name\": \"AI T-Shirt\",\n  \"type\": \"simple\",\n  \"regular_price\": \"19.99\",\n  \"stock_quantity\": 50,\n  \"manage_stock\": true\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        96,
+        128
+      ],
+      "id": "85eab306-859b-4c4a-85d5-c7150c4fd6ad",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "content": "## **CREATE A PRODUCT WORKFLOW**",
+        "height": 592,
+        "width": 1200
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -192,
+        -16
+      ],
+      "typeVersion": 1,
+      "id": "bcf0f0c0-ead6-47b2-8ca1-58eda16ccd6d",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "path": "dd96b8f1-ae23-4fb4-96af-bac4446f0fe4",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -128,
+        128
+      ],
+      "id": "352e08e9-1d05-48b2-9e86-dfb2ffed3290",
+      "name": "Webhook",
+      "webhookId": "dd96b8f1-ae23-4fb4-96af-bac4446f0fe4"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -128,
+        304
+      ],
+      "id": "23709fca-038f-414e-9f18-f890e9c5885d",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://beelinkdirect.com/wp-json/wc/v3/products",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\":\"{{ $json.name }}\",\n  \"type\": \"simple\",\n  \"regular_price\": \"{{ $json.regular_price }}\",\n  \"manage_stock\": true,\n  \"stock_quantity\":{{ $json.stock_quantity }},\n  \"status\": \"publish\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        304,
+        128
+      ],
+      "id": "96d8249b-74a4-43ae-bcf2-e8088c3e2ac0",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "3ICEENeAqPUSJoqa",
+          "name": "Woocommerse_basic_auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "664598b4-4749-46d3-b02c-bd7ccfbb5c6a",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "c9182821-5d75-41cb-b3f3-a252b9dce2ff",
+              "leftValue": "={{ $json.name }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        512,
+        128
+      ],
+      "id": "1eb3cda6-d2de-4754-82f2-2e05a3b4a87d",
+      "name": "checks success"
+    },
+    {
+      "parameters": {
+        "content": "## **UPDATE INVENTORY WORKFLOW**",
+        "height": 592,
+        "width": 1616,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1120,
+        -16
+      ],
+      "typeVersion": 1,
+      "id": "5db0b8bf-975c-402d-a633-9714771c940d",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## **PRODUCT CLEAN UP**",
+        "height": 592,
+        "width": 1888,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -288,
+        800
+      ],
+      "typeVersion": 1,
+      "id": "f8668309-6aa3-4a42-a1cb-fb8c2d6c2aa0",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "sendTo": "mrunaltalikoti2@gmail.com",
+        "subject": "Successful in creating a product",
+        "emailType": "text",
+        "message": "Hurray!!",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        704,
+        96
+      ],
+      "id": "08b0e6de-bd71-4bf6-876d-b04681f1c6fa",
+      "name": "Send a message",
+      "webhookId": "7cb414ae-33a5-412d-afb5-fd068cfd90a1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "4GpmZ2Hzr3iYiOJT",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        1184,
+        240
+      ],
+      "id": "96bbc50b-084d-4d7d-8542-6feb976e3479"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        1632,
+        240
+      ],
+      "id": "5ddf8968-3bfd-46c2-bb94-ad09a531a107"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$node['HTTP Request3'].json['status']}}",
+              "operation": "equal",
+              "value2": 200
+            }
+          ]
+        }
+      },
+      "name": "IF",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        2064,
+        240
+      ],
+      "id": "4d802ed6-e34b-4f14-898b-800be0802757"
+    },
+    {
+      "parameters": {
+        "functionCode": "let results = {\n  successful: 0,\n  failed: 0,\n  failedProducts: []\n};\n\nfor (let item of items) {\n  if (item.json.status === 200) {\n    results.successful++;\n  } else {\n    results.failed++;\n    results.failedProducts.push({\n      product_id: item.json.product_id,\n      error: item.json.error || 'Unknown error'\n    });\n  }\n}\n\nreturn [{ json: results }];"
+      },
+      "name": "Aggregate Results",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        2288,
+        240
+      ],
+      "id": "922b8246-9062-4107-ae5a-497d7101a6c0"
+    },
+    {
+      "parameters": {
+        "authentication": "basicAuth",
+        "url": "=https://beelinkdirect.com/wp-json/wc/v3/products",
+        "jsonParameters": true,
+        "options": {}
+      },
+      "name": "HTTP Request3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1856,
+        240
+      ],
+      "id": "6b115cb6-70b3-4fd1-a8ab-a63793556ca3",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "3ICEENeAqPUSJoqa",
+          "name": "Woocommerse_basic_auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "sheetId": "1Uk6tdLo3iZmfUJ-OCyg3hiiSKklpdwMU-XNC4DbQuks",
+        "options": {}
+      },
+      "name": "Read a sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 1,
+      "position": [
+        1408,
+        240
+      ],
+      "id": "5b3887de-19fe-4683-a74d-15c39dbee279",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "BvUzopT4mTdLg1Z4",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "mrunaltalikoti2@gmail.com",
+        "subject": "BEST",
+        "emailType": "text",
+        "message": "successful",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2496,
+        240
+      ],
+      "id": "4978f304-b524-4c37-94ac-2402b4c23c33",
+      "name": "Send a message2",
+      "webhookId": "1bc54bc5-52e9-4289-b157-fa4e108c0a47",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "4GpmZ2Hzr3iYiOJT",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "basicAuth",
+        "url": "https://beelinkdirect.com/wp-json/wc/v3/products",
+        "options": {}
+      },
+      "name": "Get Zero Stock Products",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        48,
+        1088
+      ],
+      "id": "03c57684-d1a3-48fc-ad7c-d1c2c83a8930",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "3ICEENeAqPUSJoqa",
+          "name": "Woocommerse_basic_auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "const product = $node['Split In Batches1'].json;\nconst lastModified = new Date(product.date_modified);\nconst thirtyDaysAgo = new Date();\nthirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);\n\nlet action = 'keep';\nlet reason = '';\n\nif (lastModified < thirtyDaysAgo && product.total_sales < 5) {\n  action = 'delete';\n  reason = 'Out of stock 30+ days, low sales';\n} else if (product.stock_quantity === 0) {\n  action = 'draft';\n  reason = 'Recently out of stock, move to draft';\n}\n\nreturn {\n  product_id: product.id,\n  product_name: product.name,\n  action,\n  reason,\n  last_modified: product.date_modified,\n  total_sales: product.total_sales\n};"
+      },
+      "name": "Cleanup Logic",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        496,
+        1088
+      ],
+      "id": "07a29a62-a333-4460-b1c1-5db24a6f2562"
+    },
+    {
+      "parameters": {
+        "authentication": "basicAuth",
+        "requestMethod": "POST",
+        "url": "=https://yourdomain.com/wp-json/wc/v3/products/{{ $('Split In Batches1').item.json.id }}",
+        "options": {}
+      },
+      "name": "Perform Cleanup",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        928,
+        1088
+      ],
+      "id": "5f87ee14-5995-4100-92c6-df012795784f",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "3ICEENeAqPUSJoqa",
+          "name": "Woocommerse_basic_auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "let results = {\n  deleted: 0,\n  drafted: 0,\n  kept: 0,\n  details: []\n};\n\nfor (let item of items) {\n  const action = item.json.action;\n  if (action === 'delete' && item.json.status === 200) {\n    results.deleted++;\n  } else if (action === 'draft' && item.json.status === 200) {\n    results.drafted++;\n  } else {\n    results.kept++;\n  }\n  results.details.push({\n    product_id: item.json.product_id,\n    product_name: item.json.product_name,\n    action: item.json.action,\n    reason: item.json.reason\n  });\n}\n\nreturn [{ json: results }];"
+      },
+      "name": "Collect Results",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1152,
+        1088
+      ],
+      "id": "20669c9a-3409-4cbe-9741-5c06651aa220"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "name": "Schedule Trigger1",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        -176,
+        1088
+      ],
+      "id": "a2df6ee5-3a58-4013-b334-0f091c35eb9a"
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "name": "Split In Batches1",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        272,
+        1088
+      ],
+      "id": "e384828e-b5e4-4169-b2e3-5683b6ac89c2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$node['Cleanup Logic'].json['action']}}",
+              "operation": "notEqual",
+              "value2": "keep"
+            }
+          ]
+        }
+      },
+      "name": "IF1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        704,
+        1088
+      ],
+      "id": "8871ce44-9a1f-45b5-aa9e-0e7899730aa7"
+    },
+    {
+      "parameters": {
+        "sendTo": "mrunaltalikoti2@gmail.com",
+        "subject": "done!!",
+        "emailType": "text",
+        "message": "DONE",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1344,
+        1104
+      ],
+      "id": "8ff5a801-a057-4e32-a3b9-672878a82a58",
+      "name": "Send a message1",
+      "webhookId": "95b7ab54-a391-4665-a9c2-8095e9d96b35",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "4GpmZ2Hzr3iYiOJT",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "checks success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "checks success": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read a sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Results": {
+      "main": [
+        [
+          {
+            "node": "Send a message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request3": {
+      "main": [
+        [
+          {
+            "node": "IF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read a sheet": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message2": {
+      "main": [
+        []
+      ]
+    },
+    "Get Zero Stock Products": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cleanup Logic": {
+      "main": [
+        [
+          {
+            "node": "IF1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perform Cleanup": {
+      "main": [
+        [
+          {
+            "node": "Collect Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Results": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Get Zero Stock Products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches1": {
+      "main": [
+        [
+          {
+            "node": "Cleanup Logic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF1": {
+      "main": [
+        [
+          {
+            "node": "Perform Cleanup",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Collect Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "951b184d-7479-4a60-99c4-36e6b55f979a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f6158a69620eafdc287e29a9d6242ac08505ef42fa364b41caac654414872ff9"
+  },
+  "id": "FUDBzvkiiM7zKOiO",
+  "tags": []
+}
