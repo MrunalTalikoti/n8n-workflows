@@ -1,0 +1,828 @@
+{
+  "name": "Cart-Abandonement-workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 2
+            }
+          ]
+        }
+      },
+      "id": "5440978f-0381-45e5-8879-b4e552a16772",
+      "name": "Schedule Cart Check",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1536,
+        656
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://swiztek.com/wp-json/wc/v3/orders",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "=status ",
+              "value": "=pending "
+            },
+            {
+              "name": "=after",
+              "value": "={{$now.minus({hours: 2}).toISO()}}"
+            },
+            {
+              "name": " per_page ",
+              "value": "=100"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8466d7d8-8ae9-4ae7-b342-975ad8e475da",
+      "name": "Get Abandoned Carts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -1312,
+        656
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "4s0ETUNOl7sA2OTN",
+          "name": "woo-commerce"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $('Schedule Cart Check').item.json['Day of week'] }}",
+              "rightValue": "2025-08-11T00:00:00",
+              "operator": {
+                "type": "dateTime",
+                "operation": "before"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "looseTypeValidation": false
+        }
+      },
+      "id": "e6954584-72ae-4dd5-b0f4-d8ed48278af8",
+      "name": "Check If Carts Exist",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1136,
+        656
+      ],
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process each abandoned cart\nconst carts = $input.all();\nconst processedCarts = [];\n\nfor (const cart of carts) {\n  const cartData = cart.json;\n  \n  // Calculate cart metrics\n  const totalValue = cartData.line_items?.reduce((sum, item) => sum + (parseFloat(item.price) * item.quantity), 0) || 0;\n  const itemCount = cartData.line_items?.reduce((sum, item) => sum + item.quantity, 0) || 0;\n  \n  // Determine customer segment\n  let customerSegment = 'new';\n  if (cartData.customer_id && cartData.customer_id > 0) {\n    // This would need to be enhanced with actual order history lookup\n    customerSegment = 'returning';\n  }\n  \n  // Determine recovery strategy based on cart value and customer segment\n  let strategy = 'simple_reminder';\n  let discountPercentage = 0;\n  \n  if (totalValue > 200) {\n    strategy = 'urgency_message';\n  } else if (totalValue > 100) {\n    strategy = 'offer_discount';\n    discountPercentage = 10;\n  } else if (customerSegment === 'new') {\n    strategy = 'offer_discount';\n    discountPercentage = 5;\n  }\n  \n  // Extract product categories\n  const productCategories = cartData.line_items?.map(item => item.categories || []).flat() || [];\n  const uniqueCategories = [...new Set(productCategories)];\n  \n  processedCarts.push({\n    cart_id: cartData.id,\n    customer_email: cartData.billing?.email || cartData.customer?.email,\n    customer_name: cartData.billing?.first_name || cartData.customer?.first_name || 'Valued Customer',\n    customer_id: cartData.customer_id,\n    total_value: totalValue,\n    item_count: itemCount,\n    customer_segment: customerSegment,\n    recovery_strategy: strategy,\n    discount_percentage: discountPercentage,\n    product_categories: uniqueCategories,\n    line_items: cartData.line_items,\n    cart_url: cartData.cart_recovery_url || `${cartData.woocommerce_url}/cart?restore_cart=${cartData.cart_key}`,\n    abandoned_time: cartData.date_modified || cartData.date_created\n  });\n}\n\nreturn processedCarts.map(cart => ({ json: cart }));"
+      },
+      "id": "0f095e96-6cd7-4f83-9200-9e893c513502",
+      "name": "Analyze Cart Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -944,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://swiztek.com/api/contacts",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "={{$json.customer_email}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "06e69afd-ad1c-4539-8daa-508b9f238773",
+      "name": "Get Customer Profile",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -576,
+        640
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "4s0ETUNOl7sA2OTN",
+          "name": "woo-commerce"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Enhanced customer segmentation with CRM data\nconst cartData = $input.first().json;\nconst crmData = $input.last().json;\n\n// Update customer segment based on CRM data\nlet enhancedSegment = cartData.customer_segment;\nlet lifetimeValue = 0;\nlet orderCount = 0;\n\nif (crmData && crmData.orders) {\n  orderCount = crmData.orders.length;\n  lifetimeValue = crmData.orders.reduce((sum, order) => sum + parseFloat(order.total || 0), 0);\n  \n  if (orderCount >= 5 && lifetimeValue > 1000) {\n    enhancedSegment = 'loyal';\n  } else if (orderCount >= 2) {\n    enhancedSegment = 'returning';\n  }\n}\n\n// Adjust strategy based on enhanced segmentation\nlet finalStrategy = cartData.recovery_strategy;\nlet finalDiscount = cartData.discount_percentage;\n\nif (enhancedSegment === 'loyal') {\n  finalStrategy = 'personalized_offer';\n  finalDiscount = 15;\n} else if (enhancedSegment === 'returning' && cartData.total_value > 150) {\n  finalDiscount = Math.max(finalDiscount, 8);\n}\n\nreturn [{\n  json: {\n    ...cartData,\n    customer_segment: enhancedSegment,\n    lifetime_value: lifetimeValue,\n    order_count: orderCount,\n    recovery_strategy: finalStrategy,\n    discount_percentage: finalDiscount,\n    last_order_date: crmData?.orders?.[0]?.date_created || null\n  }\n}];"
+      },
+      "id": "821c3a4f-3769-4dde-acd5-8acf6a3c588c",
+      "name": "Enhanced Segmentation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -384,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "delay_minutes",
+              "value": "={{$json.recovery_strategy === 'urgency_message' ? 30 : ($json.recovery_strategy === 'offer_discount' ? 60 : 120)}}",
+              "type": "number"
+            },
+            {
+              "name": "follow_up_time",
+              "value": "={{$now.plus({minutes: $json.delay_minutes}).toISO()}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9717f37f-4bf0-4184-b9ac-8ae98225b1e0",
+      "name": "Calculate Follow-up Timing",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        -96,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "amount": "={{$json.delay_minutes}}",
+        "unit": "minutes"
+      },
+      "id": "348dd3b0-b6e0-47d0-8a92-e98c64183d9d",
+      "name": "Wait for Optimal Timing",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        80,
+        640
+      ],
+      "webhookId": "9428cd05-fffd-45a4-87ae-5123873e2750"
+    },
+    {
+      "parameters": {
+        "url": "={{$json.woocommerce_url}}/wp-json/wc/v3/orders/{{$json.cart_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {}
+      },
+      "id": "f902761b-4039-4ff8-8d0e-f6b873a5b599",
+      "name": "Check Order Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        256,
+        640
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "4s0ETUNOl7sA2OTN",
+          "name": "woo-commerce"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{$json.status}}",
+              "rightValue": "pending",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "12f60e83-d335-4eeb-88de-e0794dc7e710",
+      "name": "Still Abandoned?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        416,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "email": "={{$json.customer_email}}",
+        "additionalFields": {},
+        "options": {}
+      },
+      "id": "69eac47d-bcd0-46b9-8e7b-dbc12c65f952",
+      "name": "Update CRM Record",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2,
+      "position": [
+        944,
+        528
+      ],
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "UGB104UWxItiONiM",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 24
+      },
+      "id": "b85aae03-66d0-429a-bd41-b20c36631c27",
+      "name": "Wait 24h for Follow-up",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1168,
+        528
+      ],
+      "webhookId": "f1e3a4e3-f3bf-4a93-bbbc-024736335df8"
+    },
+    {
+      "parameters": {
+        "url": "={{$json.woocommerce_url}}/wp-json/wc/v3/orders/{{$json.cart_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {}
+      },
+      "id": "94b2efbf-e90d-40df-ba8d-516662859765",
+      "name": "Check Final Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1392,
+        528
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "4s0ETUNOl7sA2OTN",
+          "name": "woo-commerce"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{$json.status}}",
+              "rightValue": "completed",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "a9c09aff-b902-4b61-a54e-412931abe2e3",
+      "name": "Order Completed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1616,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "your-abandoned-cart-tracking-sheet-id",
+          "mode": "id"
+        },
+        "sheetName": "Cart Recovery Log",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "ef2f067d-173f-447a-987b-0a2986eba71d",
+      "name": "Log to Spreadsheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.2,
+      "position": [
+        2288,
+        496
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "X2HDVXV7JL9FSCFt",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "your-abandoned-cart-tracking-sheet-id",
+          "mode": "id"
+        },
+        "sheetName": "Cart Recovery Log",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "98159574-f6b8-4b8e-b4fe-3818691677b1",
+      "name": "Log Recovery Success",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.2,
+      "position": [
+        1936,
+        624
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "X2HDVXV7JL9FSCFt",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "user",
+        "user": {
+          "__rl": true,
+          "value": "U099VLHQFGF",
+          "mode": "list",
+          "cachedResultName": "mrunaltalikoti2"
+        },
+        "text": "=costumer no: {{ $json.id }} has been sent remainder1",
+        "otherOptions": {}
+      },
+      "id": "35262147-2d0a-493d-af6d-20315c92073c",
+      "name": "Notify Team (Slack)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.1,
+      "position": [
+        944,
+        720
+      ],
+      "webhookId": "462a2a2b-49b8-4054-abda-8644f46e8210",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "GKZgvPQ11bmHGhx3",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "mrunaltalikoti2@gmail.com",
+        "subject": "Pending Items in your cart!!",
+        "message": "please check your cart and buy your pending items",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        688,
+        624
+      ],
+      "id": "db526ecf-f1d6-46bc-ab62-9fd87f469887",
+      "name": "Send a message",
+      "webhookId": "901a25e6-838d-47b8-8693-a5f0c1e1c8da",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "qMDLcuHVPJlBYF8T",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## GETTING CART INFO IN SCHEDULED TIME",
+        "height": 352,
+        "width": 784
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1568,
+        528
+      ],
+      "typeVersion": 1,
+      "id": "1501a1d9-f3bc-4766-a468-bdba8d2760dd",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## SEGREGATING CART CONTENTS",
+        "height": 336,
+        "width": 528,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -704,
+        528
+      ],
+      "typeVersion": 1,
+      "id": "9ce1c47f-a1e4-40b6-9c02-23ae9fe9908b",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## ALLOCATING FOLLOWUP TIME AND OBSERVING BEFORE TAKING ACTIONS",
+        "height": 320,
+        "width": 720,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -144,
+        528
+      ],
+      "typeVersion": 1,
+      "id": "3149d23f-e016-4e36-82e9-23aed2a62026",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## REMAINDER 1 AND UPDATING",
+        "height": 384,
+        "width": 480,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        624,
+        496
+      ],
+      "typeVersion": 1,
+      "id": "c53b4554-e7aa-4c09-9b96-f413435450d1",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## FOLLOWUP-2",
+        "height": 288,
+        "width": 608,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1136,
+        432
+      ],
+      "typeVersion": 1,
+      "id": "2f841cfa-951c-4cba-b98e-67206cdbdcfb",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "## FURTHER REMAINDERS AND LOG ENTRY FOR FINAL UPDATE",
+        "height": 432,
+        "width": 752
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1792,
+        352
+      ],
+      "typeVersion": 1,
+      "id": "8a8ab634-f391-4f18-a36a-4e75ec0f969e",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "sendTo": "mrunaltalikoti2@gmail.com",
+        "subject": "You have not updated your cart(if done please ignore)",
+        "emailType": "text",
+        "message": "Please visit the website once to confirm",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1904,
+        464
+      ],
+      "id": "d75f4b56-aaea-47f6-a724-41826448372e",
+      "name": "Send a message1",
+      "webhookId": "576756ad-a7a1-424f-b3f0-379f0efc646e",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "qMDLcuHVPJlBYF8T",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "mrunaltalikoti2@gmail.com",
+        "subject": "remainder 3",
+        "emailType": "text",
+        "message": "ignore if done",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2144,
+        624
+      ],
+      "id": "3219283d-4c8c-4863-9c30-baf3d7365d38",
+      "name": "Send a message3",
+      "webhookId": "7548c8db-e38d-4fe0-9032-cae5759fc833",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "qMDLcuHVPJlBYF8T",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Cart Check": {
+      "main": [
+        [
+          {
+            "node": "Get Abandoned Carts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Abandoned Carts": {
+      "main": [
+        [
+          {
+            "node": "Check If Carts Exist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check If Carts Exist": {
+      "main": [
+        [
+          {
+            "node": "Analyze Cart Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Cart Data": {
+      "main": [
+        [
+          {
+            "node": "Get Customer Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Customer Profile": {
+      "main": [
+        [
+          {
+            "node": "Enhanced Segmentation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enhanced Segmentation": {
+      "main": [
+        [
+          {
+            "node": "Calculate Follow-up Timing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Follow-up Timing": {
+      "main": [
+        [
+          {
+            "node": "Wait for Optimal Timing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Optimal Timing": {
+      "main": [
+        [
+          {
+            "node": "Check Order Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Order Status": {
+      "main": [
+        [
+          {
+            "node": "Still Abandoned?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update CRM Record": {
+      "main": [
+        [
+          {
+            "node": "Wait 24h for Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 24h for Follow-up": {
+      "main": [
+        [
+          {
+            "node": "Check Final Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Final Status": {
+      "main": [
+        [
+          {
+            "node": "Order Completed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Order Completed?": {
+      "main": [
+        [
+          {
+            "node": "Log Recovery Success",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Still Abandoned?": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Notify Team (Slack)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update CRM Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Recovery Success": {
+      "main": [
+        [
+          {
+            "node": "Send a message3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message3": {
+      "main": [
+        [
+          {
+            "node": "Log to Spreadsheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1b7c7236-7df1-487f-95a7-08d525c0f08e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "374214c38fd67a85d2416d9c1671950725f567f369b001d6f19988c4d10849c7"
+  },
+  "id": "0YVzlUbJrvyyvW4X",
+  "tags": []
+}
